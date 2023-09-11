@@ -38,52 +38,56 @@ def main(chat_id):
 def log(text):
 	time = str(datetime.datetime.utcnow())[:22]
 	try: 
-		with open(files.working_log, 'a', encoding='utf-8') as f: f.write(time + '    | ' + text + '\n')
+		with open(files.working_log, 'a', encoding='utf-8') as f:
+			f.write(f'{time}    | {text}' + '\n')
 	except: 
-		with open(files.working_log, 'w', encoding='utf-8') as f: f.write(time + '    | ' + text + '\n')
+		with open(files.working_log, 'w', encoding='utf-8') as f:
+			f.write(f'{time}    | {text}' + '\n')
 
 def check_message(message):
 	with shelve.open(files.bot_message_bd) as bd:
-		if message in bd: return True
-		else: return False
+		return message in bd
 
 def get_adminlist():
 	admins_list = []
 	with open(files.admins_list, encoding='utf-8') as f:
-		for admin_id in f.readlines(): admins_list.append(int(admin_id))
+		admins_list.extend(int(admin_id) for admin_id in f)
 	return admins_list
 
 def user_loger(chat_id=0):
 	if chat_id != 0:
 		with open(files.users_list, encoding='utf-8') as f:
-			if not str(chat_id) in f.read():
+			if str(chat_id) not in f.read():
 				with open(files.users_list, 'a', encoding='utf-8') as f: f.write(str(chat_id) + '\n')
 	with open(files.users_list, encoding='utf-8') as f: return len(f.readlines())
 
 def get_productcatalog():
-	product_list = '*Актуальный каталог товаров на данный момент:*\n'
-	product_list += '*СКИДКИ 25% НА ВСЁ\n*'
+	product_list = (
+		'*Актуальный каталог товаров на данный момент:*\n'
+		+ '*СКИДКИ 25% НА ВСЁ\n*'
+	)
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
 	cursor.execute("SELECT name, description, price, stored FROM goods;")
 	a = 0
 	for name, description, price, stored in cursor.fetchall():
 		a += 1
-		lasstprice = str(price*1.5)+' ₽'
+		lasstprice = f'{str(price * 1.5)} ₽'
 		array = list(lasstprice)
 		lastprice = "̶" + "̶".join(array) + "̶"
 		good_amount = amount_of_goods(name)
-		product_list += '*' + name +  '*' + ' `-`' + '  ' + lastprice + '  ' + ' *' + str(price) + '*' + ' ₽ ' + '(Осталось ' + str(good_amount) +')\n'
+		product_list += (
+			f'*{name}* `-`  {lastprice}   *{str(price)}* ₽ (Осталось {str(good_amount)}'
+			+ ')\n'
+		)
 	con.close()
-	if a == 0: return None
-	else: return product_list
+	return None if a == 0 else product_list
 
 def get_goods():
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
 	cursor.execute("SELECT name, description FROM goods;")
-	goods = []
-	for name, price in cursor.fetchall(): goods.append(name)
+	goods = [name for name, price in cursor.fetchall()]
 	con.close()
 	return goods
 
@@ -91,7 +95,7 @@ def get_goods():
 def get_stored(name_good):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
-	cursor.execute("SELECT name, stored FROM goods WHERE name = '" + name_good + "';")
+	cursor.execute(f"SELECT name, stored FROM goods WHERE name = '{name_good}';")
 	for name, stored in cursor.fetchall(): pass
 	con.close()
 	return stored
@@ -105,7 +109,7 @@ def amount_of_goods(name_good):
 def get_minimum(name_good):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
-	cursor.execute("SELECT name, minimum FROM goods WHERE name = '" + name_good + "';")
+	cursor.execute(f"SELECT name, minimum FROM goods WHERE name = '{name_good}';")
 	for name, minimum in cursor.fetchall(): pass
 	con.close()
 	return minimum
@@ -113,7 +117,7 @@ def get_minimum(name_good):
 def order_sum(name_good, amount):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
-	cursor.execute("SELECT name, price FROM goods WHERE name = '" + name_good + "';")
+	cursor.execute(f"SELECT name, price FROM goods WHERE name = '{name_good}';")
 	for name, price in cursor.fetchall(): pass
 	con.close()
 	return int(price) * amount
@@ -126,7 +130,7 @@ def read_my_line(filename, linenumber): #первым аргументом пе�
 
 def normal_read_line(filename, linenumber):
 	line = read_my_line(filename, linenumber)
-	return line[:len(line)-1]
+	return line[:-1]
 
 def get_qiwidata():
 	con = sqlite3.connect(files.main_db)
@@ -143,8 +147,7 @@ def get_qiwidata():
 			cursor.execute("DELETE FROM qiwi_data WHERE number = " + "'" + str(number) + "';")
 			con.commit()
 	con.close()
-	if a == 0: return None
-	else: return phone, t0ken
+	return None if a == 0 else (phone, t0ken)
 
 def check_qiwi_valid(phone, token):
 	api = SimpleQIWI.QApi(token=token, phone=phone)
@@ -163,9 +166,9 @@ def check_vklpayments(name):
 def get_goodformat(name_good):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
-	cursor.execute("SELECT format, stored FROM goods WHERE name = '" + name_good + "';")
+	cursor.execute(f"SELECT format, stored FROM goods WHERE name = '{name_good}';")
 	for format, stored in cursor.fetchall(): pass
-	con.close()	
+	con.close()
 	return format
 
 def check_coinbase_valid(api_key, api_secret):
@@ -182,8 +185,7 @@ def get_profit():
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
 	cursor.execute("SELECT id, price FROM purchases;")
-	price_amount = 0
-	for id, price in cursor.fetchall(): price_amount += int(price)
+	price_amount = sum(int(price) for id, price in cursor.fetchall())
 	con.close()
 	return price_amount
 
@@ -191,8 +193,7 @@ def get_amountsbayers():
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
 	cursor.execute("SELECT * FROM buyers;")
-	amoutn = 0
-	for i in cursor.fetchall(): amoutn += 1
+	amoutn = sum(1 for _ in cursor.fetchall())
 	con.close()
 	return amoutn
 
@@ -218,7 +219,7 @@ def rasl(group, amount, text):
 			except: 
 				lose_send += 1
 				new_blockuser(chat_id)
-	
+
 	elif group == 'buyers':
 		con = sqlite3.connect(files.main_db)
 		cursor = con.cursor()
@@ -235,27 +236,34 @@ def rasl(group, amount, text):
 				new_blockuser(chat_id)
 		con.close()
 
-	return 'Сообщение успешно получили ' + str(good_send) + ' юзеров!' + '\n' + str(lose_send) + ' пользователей заблокировали бота и попали в список заблокированых пользователей'
+	return (
+		f'Сообщение успешно получили {str(good_send)} юзеров!'
+		+ '\n'
+		+ str(lose_send)
+		+ ' пользователей заблокировали бота и попали в список заблокированых пользователей'
+	)
 
 def del_id(file, chat_id):
 	text = ''
 	with open(file, encoding='utf-8') as f:
-		for i in f.readlines():
-			i = i[:len(i)-1]
-			if str(chat_id) == i: pass
-			else: text +=  i + '\n'
+		for i in f:
+			i = i[:-1]
+			if str(chat_id) != i:
+				text +=  i + '\n'
 	with open(file, 'w', encoding ='utf-8') as f: f.write(text)
 
 def new_admin(his_id):
 	with open(files.admins_list, encoding='utf-8') as f:
-		if not str(his_id) in f.read():
+		if str(his_id) not in f.read():
 			with open(files.admins_list, 'a', encoding='utf-8') as f: f.write(str(his_id) + '\n')
 
 
 def get_description(name_good):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
-	cursor.execute("SELECT name, description FROM goods WHERE name = '" + name_good + "';")
+	cursor.execute(
+		f"SELECT name, description FROM goods WHERE name = '{name_good}';"
+	)
 	for name, description in cursor.fetchall(): pass
 	con.close()
 	return description
@@ -268,40 +276,40 @@ def get_coinbasedata():
 	a = 0
 	for api_key, private_key in cursor.fetchall(): a += 1
 	con.close()
-	if a == 0: return None
-	else: return api_key, private_key
+	return None if a == 0 else (api_key, private_key)
 
 def payments_checkvkl():
 	active_payment = []
-	if check_vklpayments('qiwi') == '✅' and get_qiwidata() != None: active_payment.append('qiwi')
-	elif check_vklpayments('qiwi') == '✅' and get_qiwidata() == None:
-		for id in get_adminlist(): bot.send_message(id, 'В базе данных отсутствуют данные от qiwi! Он был автоматически выключен для приёма платежей.')
-		with shelve.open(files.payments_bd) as bd: bd['qiwi'] = '❌'
+	if check_vklpayments('qiwi') == '✅':
+		if get_qiwidata() != None: active_payment.append('qiwi')
+		elif get_qiwidata() is None:
+			for id in get_adminlist(): bot.send_message(id, 'В базе данных отсутствуют данные от qiwi! Он был автоматически выключен для приёма платежей.')
+			with shelve.open(files.payments_bd) as bd: bd['qiwi'] = '❌'
 
-	if check_vklpayments('btc') ==  '✅' and get_coinbasedata() != None: active_payment.append('btc')
-	elif check_vklpayments('btc') ==  '✅' and get_coinbasedata() == None:
-		for id in get_adminlist(): bot.send_message(id, 'В базе данных отсутствуют данные от coinbase! Он был автоматически выключен для приёма платежей.')
-		with shelve.open(files.payments_bd) as bd: bd['btc'] = '❌'
+	if check_vklpayments('btc') ==  '✅':
+		if get_coinbasedata() != None: active_payment.append('btc')
+		elif get_coinbasedata() is None:
+			for id in get_adminlist(): bot.send_message(id, 'В базе данных отсутствуют данные от coinbase! Он был автоматически выключен для приёма платежей.')
+			with shelve.open(files.payments_bd) as bd: bd['btc'] = '❌'
 
-	if len(active_payment) > 0: return active_payment
+	if active_payment: return active_payment
 	else: None
 
 def generator_pw(n): #аргументом количество символов в каждом блоке
 	passwd = list('1234567890ABCDEFGHIGKLMNOPQRSTUVYXWZ') #из этим символов генерируется id
 	random.shuffle(passwd)
-	pas = ''.join([random.choice(passwd) for x in range(n)])
-	pass1 = ''.join([random.choice(passwd) for x in range(n)])	
-	pass2 = ''.join([random.choice(passwd) for x in range(n)])
-	pass3 = ''.join([random.choice(passwd) for x in range(n)])
-	pas = pas # + '-' +  pass1 + '-' + pass2 + '-' + pass3
-	return pas #возращается сгенирированный пароль
+	pas = ''.join([random.choice(passwd) for _ in range(n)])
+	pass1 = ''.join([random.choice(passwd) for _ in range(n)])
+	pass2 = ''.join([random.choice(passwd) for _ in range(n)])
+	pass3 = ''.join([random.choice(passwd) for _ in range(n)])
+	return pas
 
 def get_tovar(name_good):
 	stored = get_stored(name_good)
 	with  open(stored, encoding ='utf-8') as f: txt = f.read()
 	text = txt.split('\n')[1:]
 	d = read_my_line(stored, 0)
-	d = d[:len(d)-1]
+	d = d[:-1]
 	with open(stored, 'w', encoding ='utf-8') as f: f.write('\n'.join(text))
 	return d
 
@@ -316,17 +324,18 @@ def new_buyer(his_id, username, payed):
 	con = sqlite3.connect(files.main_db)
 	cursor = con.cursor()
 	a = 0
-	cursor.execute("SELECT id, username FROM buyers WHERE id = '" + str(his_id) + "';")
+	cursor.execute(f"SELECT id, username FROM buyers WHERE id = '{str(his_id)}';")
 	for id, username in cursor.fetchall(): a += 1
 	if a == 0:
 		cursor.execute("INSERT INTO buyers VALUES(?, ?, ?)", (his_id, username, payed))
-		con.commit()
 	else:
-		cursor.execute("SELECT id, payed FROM buyers WHERE id = '" + str(his_id) + "';")
+		cursor.execute(f"SELECT id, payed FROM buyers WHERE id = '{str(his_id)}';")
 		for id, hi_payed in cursor.fetchall(): 
 			payed = int(hi_payed) + int(payed)
-		cursor.execute("UPDATE buyers SET payed = '" + str(payed) + "' WHERE id = '" + str(his_id) + "';")
-		con.commit()
+		cursor.execute(
+			f"UPDATE buyers SET payed = '{str(payed)}' WHERE id = '{str(his_id)}';"
+		)
+	con.commit()
 	con.close()
 
 
